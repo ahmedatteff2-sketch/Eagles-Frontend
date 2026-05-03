@@ -1,8 +1,8 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useLocation as useNav } from "wouter";
 import { useAuthStore } from "@/store/auth";
-import { useLogout } from "@workspace/api-client-react";
+import { useLogout, useListUsers, getListUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const navItems = [
   { path: "/admin", label: "لوحة التحكم", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -19,20 +19,114 @@ const navItems = [
   { path: "/admin/imports", label: "الاستيراد", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> },
 ];
 
+function GlobalSearch({ onClose }: { onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const [, nav] = useNav();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { data } = useListUsers(
+    { search: q || undefined, limit: 8 },
+    { query: { queryKey: getListUsersQueryKey({ search: q || undefined, limit: 8 }), enabled: q.length > 0 } }
+  );
+  const results: any[] = q ? ((data as any)?.data ?? []) : [];
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  function goTo(id: number) {
+    nav(`/admin/members/${id}`);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl" style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(40 65% 48% / 0.25)" }}>
+        <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: "1px solid hsl(0 0% 14%)" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 flex-shrink-0" style={{ color: "hsl(40 65% 52%)" }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)}
+            className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-sm focus:outline-none"
+            placeholder="ابحث عن عضو بالاسم أو الهاتف..." />
+          <kbd className="px-2 py-0.5 rounded text-xs font-mono" style={{ background: "hsl(0 0% 14%)", color: "hsl(0 0% 45%)" }}>ESC</kbd>
+        </div>
+        {q.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <p className="text-muted-foreground text-sm">اكتب اسم العضو أو رقم الهاتف للبحث</p>
+            <p className="text-xs mt-1.5" style={{ color: "hsl(0 0% 30%)" }}>اضغط ESC للإغلاق</p>
+          </div>
+        )}
+        {q.length > 0 && results.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <p className="text-muted-foreground text-sm">لا توجد نتائج لـ "{q}"</p>
+          </div>
+        )}
+        {results.length > 0 && (
+          <div className="py-2">
+            {results.map((u: any) => {
+              const isActive = u.currentSubscription?.endDate ? new Date(u.currentSubscription.endDate) >= new Date() : false;
+              const hasSub = !!u.currentSubscription;
+              return (
+                <button key={u.id} onClick={() => goTo(u.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-right"
+                  style={{ borderBottom: "1px solid hsl(0 0% 11%)" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "hsl(0 0% 12%)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                    style={{ background: "hsl(40 65% 48% / 0.15)", color: "hsl(40 65% 58%)" }}>
+                    {u.name?.[0] ?? "?"}
+                  </div>
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="text-sm font-semibold text-foreground truncate">{u.name}</p>
+                    <p className="text-xs text-muted-foreground">{u.phone}</p>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={hasSub && isActive
+                      ? { background: "hsl(142 60% 50% / 0.15)", color: "hsl(142 60% 60%)" }
+                      : hasSub
+                      ? { background: "hsl(0 60% 50% / 0.15)", color: "hsl(0 60% 60%)" }
+                      : { background: "hsl(0 0% 16%)", color: "hsl(0 0% 45%)" }}>
+                    {hasSub && isActive ? "نشط" : hasSub ? "منتهي" : "بدون اشتراك"}
+                  </span>
+                </button>
+              );
+            })}
+            <div className="px-4 py-2">
+              <button onClick={() => { nav(`/admin/members?search=${q}`); onClose(); }}
+                className="text-xs w-full text-center py-1.5" style={{ color: "hsl(40 65% 52%)" }}>
+                عرض كل النتائج ←
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, clearAuth, refreshToken } = useAuthStore();
   const queryClient = useQueryClient();
   const logout = useLogout();
   const [collapsed, setCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   function handleLogout() {
     logout.mutate({ data: { refreshToken: refreshToken ?? "" } }, {
-      onSettled: () => {
-        clearAuth();
-        queryClient.clear();
-        window.location.href = "/login";
-      },
+      onSettled: () => { clearAuth(); queryClient.clear(); window.location.href = "/login"; },
     });
   }
 
@@ -40,17 +134,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "hsl(0 0% 5%)" }} dir="rtl">
-      {/* Sidebar */}
+      {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
+
       <aside className={`${w} flex-shrink-0 flex flex-col transition-all duration-300`}
         style={{ background: "hsl(0 0% 3%)", borderLeft: "1px solid hsl(0 0% 10%)" }}>
-
-        {/* Logo header */}
         <div className="flex items-center gap-3 px-4 py-4 relative" style={{ borderBottom: "1px solid hsl(0 0% 10%)", minHeight: 72 }}>
           <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: "linear-gradient(90deg, transparent, hsl(40 65% 48%), transparent)" }} />
           <Link href="/admin">
             <div className="flex items-center gap-3 cursor-pointer">
-              <img src="/eagle-gym-logo.jpg" alt="Eagle Gym"
-                className="flex-shrink-0 object-contain rounded-xl"
+              <img src="/eagle-gym-logo.jpg" alt="Eagle Gym" className="flex-shrink-0 object-contain rounded-xl"
                 style={{ width: 40, height: 40, background: "hsl(0 0% 7%)", boxShadow: "0 0 0 1px hsl(40 65% 48% / 0.3), 0 0 16px hsl(40 65% 48% / 0.15)" }} />
               {!collapsed && (
                 <div>
@@ -61,7 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </Link>
           {!collapsed && (
-            <button onClick={() => setCollapsed(true)} className="mr-auto p-1 rounded-lg transition-colors" style={{ color: "hsl(0 0% 35%)" }}
+            <button onClick={() => setCollapsed(true)} className="mr-auto p-1 rounded-lg" style={{ color: "hsl(0 0% 35%)" }}
               onMouseEnter={e => (e.currentTarget.style.color = "hsl(40 65% 52%)")}
               onMouseLeave={e => (e.currentTarget.style.color = "hsl(0 0% 35%)")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
@@ -79,7 +171,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           )}
         </div>
 
-        {/* Nav */}
+        {/* Search trigger */}
+        <div className="px-3 py-2.5" style={{ borderBottom: "1px solid hsl(0 0% 8%)" }}>
+          <button onClick={() => setSearchOpen(true)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${collapsed ? "justify-center" : ""}`}
+            style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 13%)", color: "hsl(0 0% 40%)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "hsl(40 65% 48% / 0.3)"; e.currentTarget.style.color = "hsl(0 0% 60%)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "hsl(0 0% 13%)"; e.currentTarget.style.color = "hsl(0 0% 40%)"; }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-right text-xs">بحث سريع...</span>
+                <kbd className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: "hsl(0 0% 14%)", color: "hsl(0 0% 35%)" }}>⌘K</kbd>
+              </>
+            )}
+          </button>
+        </div>
+
         <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden space-y-0.5 px-2">
           {navItems.map((item) => {
             const isActive = item.path === "/admin" ? location === "/admin" : location.startsWith(item.path);
@@ -91,12 +201,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     : { color: "hsl(0 0% 50%)" }}
                   onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "hsl(0 0% 8%)"; e.currentTarget.style.color = "hsl(0 0% 80%)"; } }}
                   onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "hsl(0 0% 50%)"; } }}>
-                  {/* Active gold bar */}
                   {isActive && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full" style={{ background: "hsl(40 65% 52%)" }} />}
                   <span style={{ color: isActive ? "hsl(40 65% 58%)" : "hsl(0 0% 38%)" }} className="flex-shrink-0">{item.icon}</span>
                   {!collapsed && <span className="truncate">{item.label}</span>}
                   {collapsed && (
-                    <div className="absolute left-full mr-3 px-2.5 py-1.5 rounded-lg text-xs font-semibold pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50"
+                    <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-semibold pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50"
                       style={{ background: "hsl(0 0% 12%)", color: "hsl(40 65% 58%)", boxShadow: "0 4px 12px rgba(0,0,0,0.5)", border: "1px solid hsl(0 0% 18%)" }}>
                       {item.label}
                     </div>
@@ -107,7 +216,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* User footer */}
         <div className="p-3" style={{ borderTop: "1px solid hsl(0 0% 10%)" }}>
           {!collapsed && (
             <div className="flex items-center gap-3 px-2 py-2 mb-2 rounded-xl" style={{ background: "hsl(0 0% 7%)" }}>
@@ -142,9 +250,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto" dir="rtl">
-        {children}
-      </main>
+      <main className="flex-1 overflow-y-auto" dir="rtl">{children}</main>
     </div>
   );
 }
