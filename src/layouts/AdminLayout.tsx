@@ -2,7 +2,7 @@ import { Link, useLocation, useLocation as useNav } from "wouter";
 import { useAuthStore } from "@/store/auth";
 import { useLogout, useListUsers, getListUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const navItems = [
   { path: "/admin", label: "لوحة التحكم", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -11,8 +11,11 @@ const navItems = [
   { path: "/admin/training", label: "برامج التدريب", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M6.5 6.5h11M6.5 17.5h11M3 12h18M3 12c0-1.5 1-2 2-2M3 12c0 1.5 1 2 2 2M21 12c0-1.5-1-2-2-2M21 12c0 1.5-1 2-2 2"/><circle cx="6.5" cy="6.5" r="1.5"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg> },
   { path: "/admin/payments", label: "المدفوعات", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h2M13 15h4"/></svg> },
   { path: "/admin/expenses", label: "المصاريف", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
-  { path: "/admin/checkins", label: "الحضور", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
-  { path: "/admin/qr-scanner", label: "مسح QR", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3" rx="0.5"/><rect x="19" y="14" width="2" height="2" rx="0.5"/><rect x="14" y="19" width="2" height="2" rx="0.5"/><rect x="18" y="18" width="3" height="3" rx="0.5"/></svg> },
+  {
+    path: "/admin/attendance",
+    label: "الحضور",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+  },
   { path: "/admin/schedule", label: "الجدول الأسبوعي", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
   { path: "/admin/analytics", label: "الإحصائيات", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
   { path: "/admin/exports", label: "التصدير", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> },
@@ -36,17 +39,17 @@ function GlobalSearch({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  function goTo(id: number) {
-    nav(`/admin/members/${id}`);
-    onClose();
-  }
+  function goTo(id: number) { nav(`/admin/members/${id}`); onClose(); }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl" style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(40 65% 48% / 0.25)" }}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(40 65% 48% / 0.25)" }}>
         <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: "1px solid hsl(0 0% 14%)" }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 flex-shrink-0" style={{ color: "hsl(40 65% 52%)" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+            className="w-5 h-5 flex-shrink-0" style={{ color: "hsl(40 65% 52%)" }}>
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)}
@@ -57,7 +60,6 @@ function GlobalSearch({ onClose }: { onClose: () => void }) {
         {q.length === 0 && (
           <div className="px-4 py-8 text-center">
             <p className="text-muted-foreground text-sm">اكتب اسم العضو أو رقم الهاتف للبحث</p>
-            <p className="text-xs mt-1.5" style={{ color: "hsl(0 0% 30%)" }}>اضغط ESC للإغلاق</p>
           </div>
         )}
         {q.length > 0 && results.length === 0 && (
@@ -138,6 +140,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <aside className={`${w} flex-shrink-0 flex flex-col transition-all duration-300`}
         style={{ background: "hsl(0 0% 3%)", borderLeft: "1px solid hsl(0 0% 10%)" }}>
+
         <div className="flex items-center gap-3 px-4 py-4 relative" style={{ borderBottom: "1px solid hsl(0 0% 10%)", minHeight: 72 }}>
           <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: "linear-gradient(90deg, transparent, hsl(40 65% 48%), transparent)" }} />
           <Link href="/admin">
@@ -171,7 +174,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           )}
         </div>
 
-        {/* Search trigger */}
         <div className="px-3 py-2.5" style={{ borderBottom: "1px solid hsl(0 0% 8%)" }}>
           <button onClick={() => setSearchOpen(true)}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${collapsed ? "justify-center" : ""}`}
@@ -192,7 +194,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden space-y-0.5 px-2">
           {navItems.map((item) => {
-            const isActive = item.path === "/admin" ? location === "/admin" : location.startsWith(item.path);
+            const isActive = item.path === "/admin"
+              ? location === "/admin"
+              : location.startsWith(item.path);
             return (
               <Link key={item.path} href={item.path}>
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 text-sm font-medium group relative"
