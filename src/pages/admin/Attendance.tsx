@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import jsQR from "jsqr";
 import {
   useListCheckins, useCreateCheckin, useListUsers,
-  getListCheckinsQueryKey, getCreateCheckinMutationKey, getListUsersQueryKey,
+  getListCheckinsQueryKey, getListUsersQueryKey, getCreateCheckinMutationOptions
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +49,7 @@ export default function AdminAttendance() {
   );
 
   const createCheckin = useCreateCheckin({
-    mutation: { mutationKey: getCreateCheckinMutationKey() }
+    mutation: { mutationKey: ["createCheckin"] }
   });
 
   const allCheckins: any[] = Array.isArray(checkinsRaw) ? checkinsRaw : (checkinsRaw as any)?.data ?? [];

@@ -17,6 +17,7 @@ import AdminAnalytics from "@/pages/admin/Analytics";
 import AdminExports from "@/pages/admin/Exports";
 import AdminImports from "@/pages/admin/Imports";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminReminders from "@/pages/admin/Reminders";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuthStore();
@@ -45,6 +46,8 @@ function GlobalKeyboardShortcuts() {
   return null;
 }
 
+import { ReminderPopup } from "@/components/ReminderPopup";
+
 export default function App() {
   // Apply saved theme on mount
   useEffect(() => {
@@ -55,6 +58,7 @@ export default function App() {
 
   return (
     <>
+      <ReminderPopup />
       <GlobalKeyboardShortcuts />
       <Switch>
         <Route path="/login" component={Login} />
@@ -103,6 +107,9 @@ export default function App() {
         </Route>
         <Route path="/admin/settings">
           <ProtectedRoute><AdminSettings /></ProtectedRoute>
+        </Route>
+        <Route path="/admin/reminders">
+          <ProtectedRoute><AdminReminders /></ProtectedRoute>
         </Route>
         <Route path="/">
           <Redirect to="/admin" />
