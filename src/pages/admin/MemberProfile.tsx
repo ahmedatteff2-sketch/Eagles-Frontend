@@ -10,7 +10,8 @@ import {
   getListTrainingProgramsQueryKey, getListExerciseLogsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,7 +31,7 @@ const programSchema = z.object({
 });
 type ProgramForm = z.infer<typeof programSchema>;
 
-type Tab = "overview" | "training" | "progress";
+type Tab = "overview" | "qr" | "training" | "progress";
 
 export default function AdminMemberProfile() {
   const params = useParams<{ id: string }>();
@@ -38,6 +39,7 @@ export default function AdminMemberProfile() {
   const [showAssign, setShowAssign] = useState(false);
   const [showCreateProgram, setShowCreateProgram] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const qrRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -143,8 +145,51 @@ export default function AdminMemberProfile() {
     logsByExercise[key].push(log);
   }
 
+  const qrValue = JSON.stringify({ userId, name: memberName, type: "gym-checkin" });
+
+  function downloadQR() {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const canvas = document.createElement("canvas");
+    const size = 400;
+    canvas.width = size; canvas.height = size + 80;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const img = new Image();
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    img.onload = () => {
+      ctx.drawImage(img, 40, 20, size - 80, size - 80);
+      ctx.fillStyle = "#111111"; ctx.font = "bold 22px Arial"; ctx.textAlign = "center";
+      ctx.fillText(memberName, size / 2, size - 30);
+      ctx.font = "16px Arial"; ctx.fillStyle = "#666666";
+      ctx.fillText("Eagle Gym • #" + userId, size / 2, size - 5);
+      URL.revokeObjectURL(url);
+      const link = document.createElement("a");
+      link.download = `qr-${memberName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+    img.src = url;
+  }
+
+  function printQR() {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(`<html><head><title>QR - ${memberName}</title>
+      <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;background:#fff;}svg{width:260px;height:260px;}h2{margin:16px 0 4px;font-size:22px;color:#111;}p{margin:0;color:#666;font-size:14px;}.logo{font-size:13px;color:#c9a43c;font-weight:bold;margin-top:8px;}</style></head>
+      <body>${svg.outerHTML}<h2>${memberName}</h2><p>رقم العضوية: #${userId}</p><p class="logo">🦅 Eagle Gym</p></body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 500);
+  }
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "نظرة عامة" },
+    { id: "qr", label: "📱 QR تسجيل الحضور" },
     { id: "training", label: `برامج التدريب (${programList.length})` },
     { id: "progress", label: "التطور والتقدم" },
   ];
@@ -200,6 +245,64 @@ export default function AdminMemberProfile() {
           </button>
         ))}
       </div>
+
+
+      {/* ===== QR TAB ===== */}
+      {activeTab === "qr" && (
+        <div className="flex flex-col items-center gap-6 py-4">
+          <div className="rounded-2xl p-8 flex flex-col items-center gap-5 w-full max-w-sm"
+            style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(40 65% 48% / 0.3)" }}>
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(40 65% 52%)" }}>🦅 Eagle Gym</p>
+              <h2 className="text-lg font-bold text-foreground">{memberName}</h2>
+              <p className="text-xs text-muted-foreground">رقم العضوية: #{userId}</p>
+            </div>
+            <div ref={qrRef} className="p-4 rounded-xl" style={{ background: "#ffffff" }}>
+              <QRCodeSVG value={qrValue} size={200} level="H" includeMargin={false} />
+            </div>
+            <div className="text-center space-y-1">
+              {activeSub ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                  style={isActive
+                    ? { background: "hsl(142 60% 50% / 0.15)", color: "hsl(142 60% 60%)", border: "1px solid hsl(142 60% 50% / 0.3)" }
+                    : { background: "hsl(0 60% 50% / 0.15)", color: "hsl(0 60% 60%)", border: "1px solid hsl(0 60% 50% / 0.3)" }}>
+                  {isActive ? "✅" : "⚠️"} {activeSub.subscription?.name ?? "—"} — {isActive ? "نشط" : "منتهي"}
+                </span>
+              ) : <span className="text-xs text-muted-foreground">بدون اشتراك</span>}
+              {activeSub?.endDate && <p className="text-xs text-muted-foreground">ينتهي: {new Date(activeSub.endDate).toLocaleDateString("ar-EG")}</p>}
+            </div>
+            <div className="flex gap-3 w-full">
+              <button onClick={downloadQR}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg, hsl(40 65% 52%), hsl(40 65% 42%))", color: "hsl(0 0% 5%)" }}>
+                ⬇ تحميل PNG
+              </button>
+              <button onClick={printQR}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                style={{ background: "hsl(0 0% 16%)", color: "hsl(0 0% 70%)" }}>
+                🖨 طباعة
+              </button>
+            </div>
+          </div>
+          <div className="w-full max-w-sm rounded-xl p-5 space-y-3" style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 16%)" }}>
+            <p className="text-sm font-semibold text-foreground">كيفية الاستخدام</p>
+            {[
+              { n: "1", t: "افتح صفحة تسجيل الحضور بالـ QR من القائمة" },
+              { n: "2", t: "اضغط تشغيل الكاميرا" },
+              { n: "3", t: "وجّه الكاميرا لهذا الكود — سيتسجل الحضور تلقائياً ✅" },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={{ background: "hsl(40 65% 48% / 0.2)", color: "hsl(40 65% 58%)" }}>{s.n}</div>
+                <p className="text-sm text-muted-foreground">{s.t}</p>
+              </div>
+            ))}
+            <div className="rounded-lg p-3 text-xs" style={{ background: "hsl(40 65% 48% / 0.08)", border: "1px solid hsl(40 65% 48% / 0.2)", color: "hsl(40 65% 58%)" }}>
+              💡 يمكن تحميل الـ QR وإرساله للعضو على واتساب أو طباعته وتسليمه له
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== OVERVIEW TAB ===== */}
       {activeTab === "overview" && (
