@@ -1,11 +1,15 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "./api-client";
 
 document.documentElement.classList.add("dark");
 document.documentElement.setAttribute("dir", "rtl");
 document.documentElement.setAttribute("lang", "ar");
+
+// ─── API Base URL (set VITE_API_URL env var when frontend & backend are on different domains)
+const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+if (apiUrl) setBaseUrl(apiUrl.replace(/\/+$/, ""));
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
@@ -59,7 +63,8 @@ let pendingRefresh: Promise<string | null> | null = null;
 
 async function refreshAccessToken(refreshToken: string): Promise<string | null> {
   try {
-    const res = await fetch("/api/auth/refresh", {
+    const base = apiUrl ? apiUrl.replace(/\/+$/, "") : "";
+    const res = await fetch(`${base}/api/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -85,12 +90,10 @@ setAuthTokenGetter(async () => {
   const { accessToken, refreshToken } = state;
   const exp = decodeExp(accessToken);
 
-  // Token is still valid with > 60s remaining — use it as-is
   if (exp !== null && exp * 1000 > Date.now() + 60_000) {
     return accessToken;
   }
 
-  // Token missing expiry info or has expired — try to refresh
   if (isRefreshing && pendingRefresh) {
     return pendingRefresh;
   }
