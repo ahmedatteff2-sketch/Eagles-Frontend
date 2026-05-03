@@ -15,7 +15,7 @@ const createSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(5),
   password: z.string().min(6),
-  role: z.enum(["member", "admin"]).default("member"),
+  role: z.enum(["member", "admin"]).default("member").optional(),
   subscriptionId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   paymentAmount: z.coerce.number().optional(),
@@ -26,7 +26,6 @@ type CreateForm = z.infer<typeof createSchema>;
 const editSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(5),
-  role: z.enum(["member", "admin"]).default("member"),
 });
 type EditForm = z.infer<typeof editSchema>;
 
@@ -217,7 +216,7 @@ export default function AdminMembers() {
 
   function openEdit(u: any) {
     setEditingUser(u);
-    editForm.reset({ name: u.name, phone: u.phone ?? "", role: u.role ?? "member" });
+    editForm.reset({ name: u.name, phone: u.phone ?? "" });
   }
   function onSubmitEdit(data: EditForm) {
     if (!editingUser) return;
@@ -546,12 +545,7 @@ export default function AdminMembers() {
             <Field label="رقم الهاتف" error={editForm.formState.errors.phone?.message}>
               <input {...editForm.register("phone")} className={inputCls} style={inputSt} />
             </Field>
-            <Field label="الصلاحية">
-              <select {...editForm.register("role")} className={inputCls} style={inputSt}>
-                <option value="member">عضو</option>
-                <option value="admin">مدير</option>
-              </select>
-            </Field>
+
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={updateUser.isPending} className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-40"
                 style={{ background: "linear-gradient(135deg, hsl(40 65% 52%), hsl(40 65% 42%))", color: "hsl(0 0% 5%)" }}>
@@ -576,12 +570,7 @@ export default function AdminMembers() {
             <Field label="كلمة المرور" error={createForm.formState.errors.password?.message}>
               <input {...createForm.register("password")} type="password" className={inputCls} style={inputSt} placeholder="6 أحرف على الأقل" />
             </Field>
-            <Field label="الصلاحية">
-              <select {...createForm.register("role")} className={inputCls} style={inputSt}>
-                <option value="member">عضو</option>
-                <option value="admin">مدير</option>
-              </select>
-            </Field>
+
             <div className="border-t pt-4" style={{ borderColor: "hsl(0 0% 16%)" }}>
               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">اشتراك (اختياري)</p>
               <Field label="خطة الاشتراك">

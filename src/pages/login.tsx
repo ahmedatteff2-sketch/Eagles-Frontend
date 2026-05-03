@@ -7,6 +7,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+const shakeKeyframes = `@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`;
+
 const schema = z.object({
   phone: z.string().min(1, "رقم الهاتف مطلوب"),
   password: z.string().min(1, "كلمة المرور مطلوبة"),
@@ -20,19 +22,24 @@ export default function LoginPage() {
   const { toast } = useToast();
   const login = useLogin();
   const [showPass, setShowPass] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [shaking, setShaking] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   function onSubmit(data: FormData) {
+    setLoginError("");
     login.mutate({ data }, {
       onSuccess: (res: any) => {
         setAuth(res.accessToken, res.refreshToken, res.user);
         setLocation(res.user.role === "admin" ? "/admin" : "/member");
       },
       onError: () => {
-        toast({ title: "❌ خطأ في تسجيل الدخول", description: "رقم الهاتف أو كلمة المرور غير صحيحة", variant: "destructive" });
+        setLoginError("رقم الهاتف أو كلمة المرور غير صحيحة");
+        setShaking(true);
+        setTimeout(() => setShaking(false), 500);
       },
     });
   }
@@ -73,12 +80,14 @@ export default function LoginPage() {
           <p className="text-sm" style={{ color: "hsl(0 0% 40%)" }}>نظام إدارة الصالة الرياضية</p>
         </div>
 
+        <style>{shakeKeyframes}</style>
         {/* Card */}
         <div className="rounded-2xl p-7 relative overflow-hidden"
           style={{
             background: "hsl(0 0% 8%)",
-            border: "1px solid hsl(0 0% 14%)",
-            boxShadow: "0 0 0 1px hsl(40 65% 48% / 0.06), 0 32px 64px rgba(0,0,0,0.5)"
+            border: loginError ? "1px solid hsl(0 72% 50% / 0.4)" : "1px solid hsl(0 0% 14%)",
+            boxShadow: loginError ? "0 0 20px hsl(0 72% 50% / 0.1), 0 32px 64px rgba(0,0,0,0.5)" : "0 0 0 1px hsl(40 65% 48% / 0.06), 0 32px 64px rgba(0,0,0,0.5)",
+            animation: shaking ? "shake 0.4s ease-in-out" : "none",
           }}>
           {/* Top gold line */}
           <div className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, hsl(40 65% 48% / 0.8) 50%, transparent 100%)" }} />
@@ -86,6 +95,13 @@ export default function LoginPage() {
           <h2 className="text-base font-bold mb-6" style={{ color: "hsl(0 0% 78%)" }}>
             مرحباً بك 👋
           </h2>
+
+          {loginError && (
+            <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm" style={{ background: "hsl(0 72% 50% / 0.1)", border: "1px solid hsl(0 72% 50% / 0.2)", color: "hsl(0 72% 65%)" }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {loginError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>

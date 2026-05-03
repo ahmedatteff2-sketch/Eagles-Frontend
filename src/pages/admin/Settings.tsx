@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useChangePassword } from "@workspace/api-client-react";
+import { useAuthStore } from "@/store/auth";
+import { customFetch } from "@/api-client/custom-fetch";
 
 const GOLD = "hsl(40 65% 52%)";
 const inp = "w-full rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all";
@@ -42,6 +45,9 @@ const SHORTCUTS = [
 
 export default function AdminSettings() {
   const { toast } = useToast();
+  const { user, clearAuth } = useAuthStore();
+  const changePassword = useChangePassword();
+
   const [gymName, setGymName] = useState("Eagle Gym");
   const [gymPhone, setGymPhone] = useState("");
   const [gymAddress, setGymAddress] = useState("");
@@ -49,6 +55,18 @@ export default function AdminSettings() {
   const [darkMode, setDarkMode] = useState(true);
   const [notifPermission, setNotifPermission] = useState<string>("default");
   const [saved, setSaved] = useState(false);
+
+  // Change password
+  const [currentPass, setCurrentPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [passMsg, setPassMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [passLoading, setPassLoading] = useState(false);
+
+  // Change phone
+  const [newPhone, setNewPhone] = useState("");
+  const [phonePass, setPhonePass] = useState("");
+  const [phoneMsg, setPhoneMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   useEffect(() => {
     const s = localStorage.getItem("gym-settings");
@@ -89,6 +107,44 @@ export default function AdminSettings() {
     toast({ title: "✅ تم حفظ الإعدادات" });
   }
 
+  async function handleChangePassword() {
+    if (!currentPass || !newPass) { setPassMsg({ type: "err", text: "يرجى ملء جميع الحقول" }); return; }
+    if (newPass.length < 8) { setPassMsg({ type: "err", text: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل" }); return; }
+    setPassLoading(true);
+    setPassMsg(null);
+    changePassword.mutate({ data: { currentPassword: currentPass, newPassword: newPass } }, {
+      onSuccess: () => {
+        setPassMsg({ type: "ok", text: "تم تغيير كلمة المرور بنجاح! سيتم تسجيل خروجك..." });
+        setCurrentPass(""); setNewPass("");
+        setTimeout(() => { clearAuth(); window.location.replace("/login"); }, 2000);
+      },
+      onError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "كلمة المرور الحالية غير صحيحة";
+        setPassMsg({ type: "err", text: msg });
+      },
+      onSettled: () => setPassLoading(false),
+    });
+  }
+
+  async function handleChangePhone() {
+    if (!newPhone || !phonePass) { setPhoneMsg({ type: "err", text: "يرجى ملء جميع الحقول" }); return; }
+    setPhoneLoading(true);
+    setPhoneMsg(null);
+    try {
+      await customFetch("/api/auth/update-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPhone, password: phonePass }),
+      });
+      setPhoneMsg({ type: "ok", text: "تم تحديث رقم الهاتف بنجاح!" });
+      setNewPhone(""); setPhonePass("");
+    } catch (err: any) {
+      setPhoneMsg({ type: "err", text: err?.message || "كلمة المرور غير صحيحة" });
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto" dir="rtl">
       <div className="flex items-center justify-between">
@@ -102,6 +158,69 @@ export default function AdminSettings() {
           {saved ? "✅ تم الحفظ" : "💾 حفظ"}
         </button>
       </div>
+
+      {/* My Account */}
+      <Section title="👤 حسابي">
+        <p className="text-xs text-muted-foreground -mt-2">مسجّل دخول كـ: <span style={{ color: GOLD }}>{user?.name || "Admin"}</span> ({user?.phone || "—"})</p>
+        
+        {/* Change Password */}
+        <div className="rounded-lg p-4 space-y-3" style={{ background: "hsl(0 0% 7%)", border: "1px solid hsl(0 0% 13%)" }}>
+          <p className="text-xs font-bold text-foreground uppercase tracking-wide">🔒 تغيير كلمة المرور</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">كلمة المرور الحالية</label>
+              <input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)}
+                className={inp} style={inpSt} placeholder="••••••••" />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">كلمة المرور الجديدة</label>
+              <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)}
+                className={inp} style={inpSt} placeholder="8 أحرف على الأقل" />
+            </div>
+          </div>
+          {passMsg && (
+            <p className="text-xs px-3 py-2 rounded-lg" style={{
+              background: passMsg.type === "ok" ? "hsl(142 60% 50% / 0.1)" : "hsl(0 72% 50% / 0.1)",
+              color: passMsg.type === "ok" ? "hsl(142 60% 60%)" : "hsl(0 72% 60%)",
+              border: `1px solid ${passMsg.type === "ok" ? "hsl(142 60% 50% / 0.2)" : "hsl(0 72% 50% / 0.2)"}`,
+            }}>{passMsg.text}</p>
+          )}
+          <button onClick={handleChangePassword} disabled={passLoading}
+            className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-40 transition-all"
+            style={{ background: "hsl(0 72% 51% / 0.15)", color: "hsl(0 72% 60%)", border: "1px solid hsl(0 72% 51% / 0.25)" }}>
+            {passLoading ? "جاري التغيير..." : "تغيير كلمة المرور"}
+          </button>
+        </div>
+
+        {/* Change Phone */}
+        <div className="rounded-lg p-4 space-y-3" style={{ background: "hsl(0 0% 7%)", border: "1px solid hsl(0 0% 13%)" }}>
+          <p className="text-xs font-bold text-foreground uppercase tracking-wide">📱 تغيير رقم الهاتف</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">رقم الهاتف الجديد</label>
+              <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)}
+                className={inp} style={inpSt} placeholder="01xxxxxxxxx" />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">كلمة المرور (للتأكيد)</label>
+              <input type="password" value={phonePass} onChange={e => setPhonePass(e.target.value)}
+                className={inp} style={inpSt} placeholder="••••••••" />
+            </div>
+          </div>
+          {phoneMsg && (
+            <p className="text-xs px-3 py-2 rounded-lg" style={{
+              background: phoneMsg.type === "ok" ? "hsl(142 60% 50% / 0.1)" : "hsl(0 72% 50% / 0.1)",
+              color: phoneMsg.type === "ok" ? "hsl(142 60% 60%)" : "hsl(0 72% 60%)",
+              border: `1px solid ${phoneMsg.type === "ok" ? "hsl(142 60% 50% / 0.2)" : "hsl(0 72% 50% / 0.2)"}`,
+            }}>{phoneMsg.text}</p>
+          )}
+          <button onClick={handleChangePhone} disabled={phoneLoading}
+            className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-40 transition-all"
+            style={{ background: "hsl(40 65% 48% / 0.15)", color: GOLD, border: "1px solid hsl(40 65% 48% / 0.25)" }}>
+            {phoneLoading ? "جاري التحديث..." : "تحديث رقم الهاتف"}
+          </button>
+        </div>
+      </Section>
 
       <Section title="هوية النادي">
         <div className="flex items-center gap-5">
