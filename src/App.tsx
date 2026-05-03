@@ -13,13 +13,12 @@ import AdminSubscriptions from "@/pages/admin/Subscriptions";
 import AdminTraining from "@/pages/admin/Training";
 import AdminTrainingProgram from "@/pages/admin/TrainingProgram";
 import AdminPayments from "@/pages/admin/Payments";
-import AdminCheckins from "@/pages/admin/Checkins";
+import AdminAttendance from "@/pages/admin/Attendance";
 import AdminAnalytics from "@/pages/admin/Analytics";
 import AdminExports from "@/pages/admin/Exports";
 import AdminImports from "@/pages/admin/Imports";
 import AdminExpenses from "@/pages/admin/Expenses";
 import AdminSchedule from "@/pages/admin/Schedule";
-import AdminQRScanner from "@/pages/admin/QRScanner";
 import MemberDashboard from "@/pages/member/Dashboard";
 import MemberWorkouts from "@/pages/member/Workouts";
 import MemberLog from "@/pages/member/Log";
@@ -31,9 +30,7 @@ import MemberSchedule from "@/pages/member/Schedule";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
-  },
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
 function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -51,24 +48,15 @@ function ProtectedMemberRoute({ component: Component }: { component: React.Compo
 }
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <AdminLayout>
-      <ProtectedAdminRoute component={Component} />
-    </AdminLayout>
-  );
+  return <AdminLayout><ProtectedAdminRoute component={Component} /></AdminLayout>;
 }
 
 function MemberRoute({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <MemberLayout>
-      <ProtectedMemberRoute component={Component} />
-    </MemberLayout>
-  );
+  return <MemberLayout><ProtectedMemberRoute component={Component} /></MemberLayout>;
 }
 
 function Router() {
   const { user, accessToken } = useAuthStore();
-
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
@@ -81,13 +69,15 @@ function Router() {
       <Route path="/admin/training">{() => <AdminRoute component={AdminTraining} />}</Route>
       <Route path="/admin/training/:programId">{() => <AdminRoute component={AdminTrainingProgram} />}</Route>
       <Route path="/admin/payments">{() => <AdminRoute component={AdminPayments} />}</Route>
-      <Route path="/admin/checkins">{() => <AdminRoute component={AdminCheckins} />}</Route>
+      <Route path="/admin/attendance">{() => <AdminRoute component={AdminAttendance} />}</Route>
+      {/* Legacy redirects */}
+      <Route path="/admin/checkins">{() => <Redirect to="/admin/attendance" />}</Route>
+      <Route path="/admin/qr-scanner">{() => <Redirect to="/admin/attendance" />}</Route>
       <Route path="/admin/analytics">{() => <AdminRoute component={AdminAnalytics} />}</Route>
       <Route path="/admin/exports">{() => <AdminRoute component={AdminExports} />}</Route>
       <Route path="/admin/imports">{() => <AdminRoute component={AdminImports} />}</Route>
       <Route path="/admin/expenses">{() => <AdminRoute component={AdminExpenses} />}</Route>
       <Route path="/admin/schedule">{() => <AdminRoute component={AdminSchedule} />}</Route>
-      <Route path="/admin/qr-scanner">{() => <AdminRoute component={AdminQRScanner} />}</Route>
 
       {/* Member routes */}
       <Route path="/member">{() => <MemberRoute component={MemberDashboard} />}</Route>
@@ -99,7 +89,6 @@ function Router() {
       <Route path="/member/qr">{() => <MemberRoute component={MemberQRCode} />}</Route>
       <Route path="/member/schedule">{() => <MemberRoute component={MemberSchedule} />}</Route>
 
-      {/* Root redirect */}
       <Route path="/">
         {() => {
           if (!accessToken || !user) return <Redirect to="/login" />;
