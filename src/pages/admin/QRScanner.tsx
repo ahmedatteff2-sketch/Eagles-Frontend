@@ -176,11 +176,11 @@ export default function AdminQRScanner() {
   }, [processQR, toast]);
 
   const handleManualCheckin = async () => {
-    const id = parseInt(manualId);
-    if (!id) { toast({ title: "أدخل رقم عضوية صحيح", variant: "destructive" }); return; }
-    const user = users.find((u: any) => u.id === id);
+    if (!manualId.trim()) { toast({ title: "أدخل رقم عضوية صحيح", variant: "destructive" }); return; }
+    const idNum = parseInt(manualId);
+    const user = users.find((u: any) => u.id === idNum || u.memberCode === manualId.trim() || u.phone === manualId.trim());
     if (!user) { toast({ title: "العضو غير موجود", variant: "destructive" }); return; }
-    await doCheckin(id, user.name);
+    await doCheckin(user.id, user.name);
     setManualId("");
   };
 
@@ -303,16 +303,16 @@ export default function AdminQRScanner() {
             className="w-full rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none"
             style={{ background: "hsl(0 0% 13%)", border: "1px solid hsl(0 0% 22%)" }}>
             <option value="">-- اختر عضو --</option>
-            {users.map((u: any) => <option key={u.id} value={u.id}>{u.name} — {u.phone}</option>)}
+            {users.map((u: any) => <option key={u.id} value={u.memberCode || u.id}>{u.name} — {u.phone} {u.memberCode ? `(${u.memberCode})` : ""}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5">أو أدخل رقم العضوية مباشرة</label>
-          <input type="number" value={manualId} onChange={e => setManualId(e.target.value)}
+          <label className="block text-xs text-muted-foreground mb-1.5">أو أدخل الكود التعريفي، رقم الهاتف، أو ID</label>
+          <input type="text" value={manualId} onChange={e => setManualId(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleManualCheckin()}
             className="w-full rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none"
             style={{ background: "hsl(0 0% 13%)", border: "1px solid hsl(0 0% 22%)" }}
-            placeholder="مثال: 42" />
+            placeholder="مثال: EAGLE-001 أو رقم الموبايل" />
         </div>
         <button onClick={handleManualCheckin} disabled={loading || !manualId}
           className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40"
