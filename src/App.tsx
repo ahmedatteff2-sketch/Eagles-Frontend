@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import AdminLayout from "@/layouts/AdminLayout";
 import { useAuthStore } from "@/store/auth";
 
-import Login from "@/pages/Login";
+import Login from "@/pages/login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminMembers from "@/pages/admin/Members";
 import AdminMemberProfile from "@/pages/admin/MemberProfile";
