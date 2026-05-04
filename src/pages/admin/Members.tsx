@@ -547,7 +547,7 @@ export default function AdminMembers() {
             <Field label="رقم الهاتف" error={editForm.formState.errors.phone?.message}>
               <input {...editForm.register("phone")} className={inputCls} style={inputSt} />
             </Field>
-            <Field label="كود تعريفي (اختياري)" error={editForm.formState.errors.memberCode?.message}>
+            <Field label="رقم العضوية / ID (اختياري)" error={editForm.formState.errors.memberCode?.message}>
               <input {...editForm.register("memberCode")} className={inputCls} style={inputSt} placeholder="كود البحث أو الباركود" />
             </Field>
 
@@ -572,7 +572,7 @@ export default function AdminMembers() {
             <Field label="رقم الهاتف" error={createForm.formState.errors.phone?.message}>
               <input {...createForm.register("phone")} type="tel" className={inputCls} style={inputSt} placeholder="01xxxxxxxxx" />
             </Field>
-            <Field label="كود تعريفي (اختياري)" error={createForm.formState.errors.memberCode?.message}>
+            <Field label="رقم العضوية / ID (اختياري)" error={createForm.formState.errors.memberCode?.message}>
               <input {...createForm.register("memberCode")} className={inputCls} style={inputSt} placeholder="مثال: EAGLE-001" />
             </Field>
             <Field label="كلمة المرور" error={createForm.formState.errors.password?.message}>
