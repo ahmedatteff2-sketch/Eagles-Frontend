@@ -6,6 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/store/auth";
 
 type Tab = "qr" | "log";
 
@@ -77,14 +78,16 @@ export default function AdminAttendance() {
 
   function clearFilters() { setDateFrom(""); setDateTo(""); setSearch(""); }
 
-  async function doCheckin(userId: number) {
+  async function doCheckin(userId: number): Promise<{ ok: boolean; conflict: boolean; message?: string }> {
     try {
       const today = new Date().toISOString().split("T")[0];
       await createCheckin.mutateAsync({ data: { userId, date: today } as any });
       queryClient.invalidateQueries({ queryKey: getListCheckinsQueryKey({}) });
-      return true;
+      return { ok: true, conflict: false };
     } catch (e: any) {
-      return false;
+      const status = e?.response?.status ?? e?.status;
+      const msg = e?.response?.data?.message ?? e?.message ?? "";
+      return { ok: false, conflict: status === 409, message: msg };
     }
   }
 
@@ -158,40 +161,48 @@ export default function AdminAttendance() {
   }
 
   async function handleManualCheckin() {
-    if (!manualUserId.trim()) { toast({ title: "أدخل بيانات صحيحة", variant: "destructive" }); return; }
+    const query = manualUserId.trim();
+    if (!query) { toast({ title: "أدخل بيانات صحيحة", variant: "destructive" }); return; }
     setSavingManual(true);
 
-    let userToHandle = null;
-    const searchVal = manualUserId.trim().toLowerCase();
-    const idNum = parseInt(manualUserId, 10);
-
-    // Try finding in currently fetched list first
-    userToHandle = userList.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
-
-    // If not found, fetch from API
-    if (!userToHandle) {
-      try {
-        const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || "";
-        const baseUrl = (import.meta.env.VITE_API_URL as string || "").replace(/\/+$/, "");
-        const res = await fetch(`${baseUrl}/api/users?search=${encodeURIComponent(manualUserId.trim())}&limit=5`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+    // Always search the API — it handles name / phone / memberCode / ID
+    let userToHandle: any = null;
+    try {
+      const token = useAuthStore.getState().accessToken || "";
+      const baseUrl = (import.meta.env.VITE_API_URL as string || "").replace(/\/+$/, "");
+      const res = await fetch(`${baseUrl}/api/users?search=${encodeURIComponent(query)}&limit=10`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
         const data = await res.json();
-        const users = data?.data || [];
-        userToHandle = users.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
-      } catch (e) { }
-    }
+        const list: any[] = data?.data ?? data ?? [];
+        // Pick exact match by ID, memberCode, or phone; else take first result
+        const idNum = parseInt(query, 10);
+        userToHandle =
+          list.find((u: any) => String(u.id) === query) ||
+          list.find((u: any) => u.memberCode?.toLowerCase() === query.toLowerCase()) ||
+          list.find((u: any) => u.phone === query) ||
+          (list.length === 1 ? list[0] : null);
+      }
+    } catch { }
 
     if (!userToHandle) {
-      toast({ title: "العضو غير موجود", variant: "destructive" });
+      toast({ title: `❌ العضو "${query}" غير موجود`, variant: "destructive" });
       setSavingManual(false);
       return;
     }
 
-    const ok = await doCheckin(userToHandle.id);
+    const result = await doCheckin(userToHandle.id);
     setSavingManual(false);
-    toast({ title: ok ? `✅ تم تسجيل الزياره بنجاح (${userToHandle.name})` : "⚠️ فشل في التسجيل، مسجل مسبقاً أو خطأ" });
-    if (ok) setManualUserId("");
+
+    if (result.ok) {
+      toast({ title: `✅ تم تسجيل الزياره بنجاح — ${userToHandle.name}` });
+      setManualUserId("");
+    } else if (result.conflict) {
+      toast({ title: `⚠️ ${userToHandle.name} مسجل حضوره اليوم مسبقاً`, variant: "destructive" });
+    } else {
+      toast({ title: `❌ فشل التسجيل: ${result.message || "خطأ غير معروف"}`, variant: "destructive" });
+    }
   }
 
   const hasFilters = !!(dateFrom || dateTo || search);
