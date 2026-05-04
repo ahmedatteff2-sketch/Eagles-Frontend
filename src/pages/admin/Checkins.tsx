@@ -44,8 +44,8 @@ export default function AdminCheckins() {
     });
   }
 
-  const checkinList = Array.isArray(checkins) ? checkins : (checkins as any)?.checkins ?? [];
-  const userList = Array.isArray(users) ? users : (users as any)?.users ?? [];
+  const checkinList = Array.isArray(checkins) ? checkins : (checkins as any)?.data ?? (checkins as any)?.checkins ?? [];
+  const userList = Array.isArray(users) ? users : (users as any)?.data ?? (users as any)?.users ?? [];
 
   return (
     <div className="p-6 space-y-4">

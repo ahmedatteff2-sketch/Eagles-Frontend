@@ -173,7 +173,8 @@ export default function AdminAttendance() {
     if (!userToHandle) {
       try {
         const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || "";
-        const res = await fetch(`/api/users?search=${encodeURIComponent(manualUserId.trim())}&limit=5`, {
+        const baseUrl = (import.meta.env.VITE_API_URL as string || "").replace(/\/+$/, "");
+        const res = await fetch(`${baseUrl}/api/users?search=${encodeURIComponent(manualUserId.trim())}&limit=5`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
