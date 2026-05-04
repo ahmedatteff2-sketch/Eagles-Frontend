@@ -21,7 +21,7 @@ type StatForm = z.infer<typeof statSchema>;
 
 export default function MemberStats() {
   const { user } = useAuthStore();
-  const userId = user?.id ?? 0;
+  const userId = user?.id ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
 

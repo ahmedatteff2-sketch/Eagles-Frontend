@@ -145,7 +145,7 @@ function ProgramCard({ programId }: { programId: number }) {
 
 export default function MemberWorkouts() {
   const { user } = useAuthStore();
-  const userId = user?.id ?? 0;
+  const userId = user?.id ?? "";
 
   const { data: programs, isLoading } = useListTrainingPrograms(
     { userId },

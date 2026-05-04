@@ -33,12 +33,11 @@ export default function AdminQRScanner() {
     });
   }, []);
 
-  const doCheckin = useCallback(async (userId: number, userName: string) => {
+  const doCheckin = useCallback(async (userId: string, userName: string) => {
     if (loading) return;
     setLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
-      await createCheckin.mutateAsync({ data: { userId, date: today } });
+      await createCheckin.mutateAsync({ data: { userId } });
       setLastCheckin({ name: userName, time: new Date().toLocaleTimeString("ar-EG") });
       setFlash(true);
       setTimeout(() => setFlash(false), 900);
@@ -57,15 +56,16 @@ export default function AdminQRScanner() {
     try {
       const parsed = JSON.parse(raw);
       if (parsed.userId && parsed.type === "gym-checkin") {
-        const user = users.find((u: any) => u.id === parsed.userId);
-        doCheckin(parsed.userId, parsed.name ?? user?.name ?? "#" + parsed.userId);
+        const uid = String(parsed.userId);
+        const user = users.find((u: any) => String(u.id) === uid);
+        doCheckin(uid, parsed.name ?? user?.name ?? "#" + uid);
         return;
       }
     } catch { }
-    const num = parseInt(raw.trim());
-    if (!isNaN(num) && num > 0) {
-      const user = users.find((u: any) => u.id === num);
-      if (user) { doCheckin(num, user.name); return; }
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      const user = users.find((u: any) => String(u.id) === trimmed);
+      if (user) { doCheckin(String(user.id), user.name); return; }
     }
     toast({ title: "⚠ QR غير معروف", description: raw.substring(0, 50), variant: "destructive" });
   }, [users, doCheckin, toast]);
@@ -169,11 +169,10 @@ export default function AdminQRScanner() {
 
   const handleManualCheckin = async () => {
     if (!manualId.trim()) { toast({ title: "أدخل بيانات صحيحة", variant: "destructive" }); return; }
-    const idNum = parseInt(manualId);
     const searchVal = manualId.trim().toLowerCase();
-    const user = users.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
+    const user = users.find((u: any) => String(u.id) === manualId.trim() || u.membershipNumber?.toLowerCase() === searchVal || u.phone === searchVal);
     if (!user) { toast({ title: "العضو غير موجود", variant: "destructive" }); return; }
-    await doCheckin(user.id, user.name);
+    await doCheckin(String(user.id), user.name);
     setManualId("");
   };
 

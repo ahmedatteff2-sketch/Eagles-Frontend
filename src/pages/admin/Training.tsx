@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const schema = z.object({
   name: z.string().min(1, "الاسم مطلوب"),
-  userId: z.coerce.number().min(1, "اختر عضو"),
+  userId: z.string().min(1, "اختر عضو"),
 });
 type FormData = z.infer<typeof schema>;
 
