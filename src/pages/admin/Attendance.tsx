@@ -80,7 +80,8 @@ export default function AdminAttendance() {
 
   async function doCheckin(userId: number) {
     try {
-      await createCheckin.mutateAsync({ data: { userId, checkinTime: new Date().toISOString() } });
+      const today = new Date().toISOString().split("T")[0];
+      await createCheckin.mutateAsync({ data: { userId, date: today } as any });
       queryClient.invalidateQueries({ queryKey: getListCheckinsQueryKey({}) });
       return true;
     } catch (e: any) {
