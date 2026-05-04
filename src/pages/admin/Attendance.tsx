@@ -58,7 +58,7 @@ export default function AdminAttendance() {
 
   // Filter by date range and search
   const filteredCheckins = allCheckins.filter((c: any) => {
-    const d = new Date(c.date ?? "");
+    const d = new Date(c.timestamp ?? "");
     if (dateFrom && d < new Date(dateFrom)) return false;
     if (dateTo && d > new Date(dateTo + "T23:59:59")) return false;
     if (search) {
@@ -71,17 +71,16 @@ export default function AdminAttendance() {
   // Group by date for display
   const grouped: Record<string, any[]> = {};
   filteredCheckins.forEach((c: any) => {
-    const key = new Date(c.date ?? "").toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const key = new Date(c.timestamp ?? "").toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(c);
   });
 
   function clearFilters() { setDateFrom(""); setDateTo(""); setSearch(""); }
 
-  async function doCheckin(userId: number): Promise<{ ok: boolean; conflict: boolean; message?: string }> {
+  async function doCheckin(userId: string): Promise<{ ok: boolean; conflict: boolean; message?: string }> {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      await createCheckin.mutateAsync({ data: { userId, date: today } as any });
+      await createCheckin.mutateAsync({ data: { userId } as any });
       queryClient.invalidateQueries({ queryKey: getListCheckinsQueryKey({}) });
       return { ok: true, conflict: false };
     } catch (e: any) {
@@ -176,11 +175,9 @@ export default function AdminAttendance() {
       if (res.ok) {
         const data = await res.json();
         const list: any[] = data?.data ?? data ?? [];
-        // Pick exact match by ID, memberCode, or phone; else take first result
-        const idNum = parseInt(query, 10);
         userToHandle =
           list.find((u: any) => String(u.id) === query) ||
-          list.find((u: any) => u.memberCode?.toLowerCase() === query.toLowerCase()) ||
+          list.find((u: any) => u.membershipNumber?.toLowerCase() === query.toLowerCase()) ||
           list.find((u: any) => u.phone === query) ||
           (list.length === 1 ? list[0] : null);
       }
@@ -337,7 +334,7 @@ export default function AdminAttendance() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">إجمالي حضور اليوم</p>
                   <p className="text-3xl font-black" style={{ color: GOLD }}>
-                    {allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length}
+                    {allCheckins.filter((c: any) => new Date(c.timestamp ?? "").toDateString() === new Date().toDateString()).length}
                   </p>
                 </div>
                 <button onClick={() => setTab("log")} className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" style={{ background: "hsl(0 0% 15%)", color: "hsl(0 0% 70%)" }}>عرض السجل</button>
@@ -345,7 +342,7 @@ export default function AdminAttendance() {
               <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
                 <p className="text-xs text-muted-foreground mb-2">آخر المسجلين اليوم:</p>
                 {allCheckins
-                  .filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString())
+                  .filter((c: any) => new Date(c.timestamp ?? "").toDateString() === new Date().toDateString())
                   .slice(0, 5)
                   .map((c: any) => (
                     <div key={c.id} className="flex items-center justify-between py-1.5">
@@ -358,7 +355,7 @@ export default function AdminAttendance() {
                       <span className="text-xs text-muted-foreground tabular-nums px-2 py-0.5 rounded" style={{ background: "hsl(0 0% 15%)" }}>اليوم</span>
                     </div>
                   ))}
-                {allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length === 0 && (
+                {allCheckins.filter((c: any) => new Date(c.timestamp ?? "").toDateString() === new Date().toDateString()).length === 0 && (
                   <p className="text-xs text-center text-muted-foreground py-2">لا يوجد حضور مسجل اليوم</p>
                 )}
               </div>
@@ -439,7 +436,7 @@ export default function AdminAttendance() {
                   <div style={{ background: "hsl(0 0% 8%)" }}>
                     {entries.map((c: any) => {
                       const name = c.userName ?? "—";
-                      const time = new Date(c.date ?? "").toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+                      const time = new Date(c.timestamp ?? "").toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
                       return (
                         <div key={c.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: "1px solid hsl(0 0% 11%)" }}>
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"

@@ -14,10 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 const createSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(5),
-  memberCode: z.string().optional(),
+  membershipNumber: z.string().optional(),
   password: z.string().min(6),
-  role: z.enum(["member", "admin"]).default("member").optional(),
-  subscriptionId: z.coerce.number().optional(),
+  role: z.string().default("MEMBER").optional(),
+  subscriptionId: z.coerce.string().optional(),
   startDate: z.string().optional(),
   paymentAmount: z.coerce.number().optional(),
   paymentMethod: z.enum(["cash", "card", "transfer"]).optional(),
@@ -27,7 +27,7 @@ type CreateForm = z.infer<typeof createSchema>;
 const editSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(5),
-  memberCode: z.string().optional(),
+  membershipNumber: z.string().optional(),
 });
 type EditForm = z.infer<typeof editSchema>;
 
@@ -218,7 +218,7 @@ export default function AdminMembers() {
 
   function openEdit(u: any) {
     setEditingUser(u);
-    editForm.reset({ name: u.name, phone: u.phone ?? "", memberCode: u.memberCode ?? "" });
+    editForm.reset({ name: u.name, phone: u.phone ?? "", membershipNumber: u.membershipNumber ?? "" });
   }
   function onSubmitEdit(data: EditForm) {
     if (!editingUser) return;
@@ -547,8 +547,8 @@ export default function AdminMembers() {
             <Field label="رقم الهاتف" error={editForm.formState.errors.phone?.message}>
               <input {...editForm.register("phone")} className={inputCls} style={inputSt} />
             </Field>
-            <Field label="رقم العضوية / ID (اختياري)" error={editForm.formState.errors.memberCode?.message}>
-              <input {...editForm.register("memberCode")} className={inputCls} style={inputSt} placeholder="كود البحث أو الباركود" />
+            <Field label="رقم العضوية / ID (اختياري)" error={editForm.formState.errors.membershipNumber?.message}>
+              <input {...editForm.register("membershipNumber")} className={inputCls} style={inputSt} placeholder="كود البحث أو الباركود" />
             </Field>
 
             <div className="flex gap-3 pt-2">
@@ -572,8 +572,8 @@ export default function AdminMembers() {
             <Field label="رقم الهاتف" error={createForm.formState.errors.phone?.message}>
               <input {...createForm.register("phone")} type="tel" className={inputCls} style={inputSt} placeholder="01xxxxxxxxx" />
             </Field>
-            <Field label="رقم العضوية / ID (اختياري)" error={createForm.formState.errors.memberCode?.message}>
-              <input {...createForm.register("memberCode")} className={inputCls} style={inputSt} placeholder="مثال: EAGLE-001" />
+            <Field label="رقم العضوية / ID (اختياري)" error={createForm.formState.errors.membershipNumber?.message}>
+              <input {...createForm.register("membershipNumber")} className={inputCls} style={inputSt} placeholder="مثال: EAGLE-001" />
             </Field>
             <Field label="كلمة المرور" error={createForm.formState.errors.password?.message}>
               <input {...createForm.register("password")} type="password" className={inputCls} style={inputSt} placeholder="6 أحرف على الأقل" />
