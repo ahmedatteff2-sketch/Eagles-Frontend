@@ -152,7 +152,7 @@ export default function AdminAttendance() {
       const match = code.data.match(/userId[:=](d+)/i) || code.data.match(/^(d+)$/);
       if (!match) { toast({ title: "QR غير صالح", variant: "destructive" }); return; }
       const ok = await doCheckin(parseInt(match[1], 10));
-      toast({ title: ok ? "✅ تم تسجيل الحضور" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
+      toast({ title: ok ? "✅ تم تسجيل الزياره بنجاح" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
     };
     img.src = URL.createObjectURL(file);
   }
@@ -190,7 +190,7 @@ export default function AdminAttendance() {
 
     const ok = await doCheckin(userToHandle.id);
     setSavingManual(false);
-    toast({ title: ok ? `✅ تم تسجيل حضور ${userToHandle.name}` : "⚠️ فشل في التسجيل" });
+    toast({ title: ok ? `✅ تم تسجيل الزياره بنجاح (${userToHandle.name})` : "⚠️ فشل في التسجيل، مسجل مسبقاً أو خطأ" });
     if (ok) setManualUserId("");
   }
 
@@ -322,9 +322,35 @@ export default function AdminAttendance() {
 
             {/* Today's checkins summary */}
             <div className="rounded-xl p-4" style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 15%)" }}>
-              <p className="text-xs text-muted-foreground mb-1">حضور اليوم</p>
-              <p className="text-3xl font-black" style={{ color: GOLD }}>{allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length}</p>
-              <p className="text-xs text-muted-foreground mt-1">{today}</p>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">إجمالي حضور اليوم</p>
+                  <p className="text-3xl font-black" style={{ color: GOLD }}>
+                    {allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length}
+                  </p>
+                </div>
+                <button onClick={() => setTab("log")} className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" style={{ background: "hsl(0 0% 15%)", color: "hsl(0 0% 70%)" }}>عرض السجل</button>
+              </div>
+              <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
+                <p className="text-xs text-muted-foreground mb-2">آخر المسجلين اليوم:</p>
+                {allCheckins
+                  .filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString())
+                  .slice(0, 5)
+                  .map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: avatarColor(c.userName ?? "") + "22", color: avatarColor(c.userName ?? "") }}>
+                          {(c.userName ?? "—")[0]}
+                        </div>
+                        <span className="text-sm text-foreground">{c.userName ?? "—"}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground tabular-nums px-2 py-0.5 rounded" style={{ background: "hsl(0 0% 15%)" }}>اليوم</span>
+                    </div>
+                  ))}
+                {allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length === 0 && (
+                  <p className="text-xs text-center text-muted-foreground py-2">لا يوجد حضور مسجل اليوم</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
