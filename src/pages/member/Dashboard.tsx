@@ -3,7 +3,7 @@ import { useGetMemberCurrentSubscription, getGetMemberCurrentSubscriptionQueryKe
 
 export default function MemberDashboard() {
   const { user } = useAuthStore();
-  const userId = user?.id ?? 0;
+  const userId = user?.id ?? "";
 
   const { data: sub, isLoading } = useGetMemberCurrentSubscription(userId, {
     query: { queryKey: getGetMemberCurrentSubscriptionQueryKey(userId), enabled: !!userId },

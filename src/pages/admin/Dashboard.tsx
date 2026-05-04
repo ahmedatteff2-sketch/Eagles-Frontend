@@ -42,8 +42,8 @@ export default function AdminDashboard() {
   const [, nav] = useLocation();
   const { data: stats, isLoading } = useGetDashboardStats({ query: { queryKey: getGetDashboardStatsQueryKey() } });
   const { data: expiringData } = useListUsers(
-    { status: "expiring", limit: 20 },
-    { query: { queryKey: getListUsersQueryKey({ status: "expiring", limit: 20 }) } }
+    { status: "active", limit: 100 },
+    { query: { queryKey: getListUsersQueryKey({ status: "active", limit: 100 }) } }
   );
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [gymName, setGymName] = useState("Eagle Gym");

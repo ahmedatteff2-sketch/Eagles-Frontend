@@ -200,7 +200,7 @@ function QuickLogPanel({
 
 export default function MemberLog() {
   const { user } = useAuthStore();
-  const userId = user?.id ?? 0;
+  const userId = user?.id ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const today = new Date().toISOString().split("T")[0];

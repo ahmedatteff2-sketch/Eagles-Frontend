@@ -40,8 +40,8 @@ export default function AdminAttendance() {
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: checkinsRaw, isLoading: logLoading } = useListCheckins(
-    { date: dateFrom || undefined },
-    { query: { queryKey: getListCheckinsQueryKey({ date: dateFrom || undefined }) } }
+    { from: dateFrom || undefined, to: dateTo || undefined },
+    { query: { queryKey: getListCheckinsQueryKey({ from: dateFrom || undefined, to: dateTo || undefined }) } }
   );
 
   const { data: usersRaw } = useListUsers(
@@ -106,11 +106,11 @@ export default function AdminAttendance() {
       const code = jsQR(imageData.data, imageData.width, imageData.height);
       if (code && code.data !== lastScanned) {
         setLastScanned(code.data);
-        const match = code.data.match(/userId[:=](d+)/i) || code.data.match(/^(d+)$/);
+        const match = code.data.match(/userId[:=]([\w-]+)/i) || code.data.match(/^([\w-]+)$/);
         if (match) {
-          const uid = parseInt(match[1], 10);
-          const ok = await doCheckin(uid);
-          toast({ title: ok ? "✅ تم تسجيل الحضور" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
+          const uid = match[1];
+          const result = await doCheckin(uid);
+          toast({ title: result.ok ? "✅ تم تسجيل الحضور" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
           setTimeout(() => setLastScanned(null), 3000);
         }
       }
@@ -151,10 +151,10 @@ export default function AdminAttendance() {
       const d = canvas.getContext("2d")!.getImageData(0, 0, img.width, img.height);
       const code = jsQR(d.data, d.width, d.height);
       if (!code) { toast({ title: "لم يُعثر على QR في الصورة", variant: "destructive" }); return; }
-      const match = code.data.match(/userId[:=](d+)/i) || code.data.match(/^(d+)$/);
+      const match = code.data.match(/userId[:=]([\w-]+)/i) || code.data.match(/^([\w-]+)$/);
       if (!match) { toast({ title: "QR غير صالح", variant: "destructive" }); return; }
-      const ok = await doCheckin(parseInt(match[1], 10));
-      toast({ title: ok ? "✅ تم تسجيل الزياره بنجاح" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
+      const result = await doCheckin(match[1]);
+      toast({ title: result.ok ? "✅ تم تسجيل الزياره بنجاح" : "⚠️ حضور مسجل مسبقاً أو خطأ" });
     };
     img.src = URL.createObjectURL(file);
   }
@@ -189,7 +189,7 @@ export default function AdminAttendance() {
       return;
     }
 
-    const result = await doCheckin(userToHandle.id);
+    const result = await doCheckin(String(userToHandle.id));
     setSavingManual(false);
 
     if (result.ok) {

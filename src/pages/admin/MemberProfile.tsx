@@ -42,7 +42,7 @@ const inp = "w-full bg-input border border-border rounded-lg px-3 py-2 text-sm t
 
 export default function AdminMemberProfile() {
   const params = useParams<{ id: string }>();
-  const userId = parseInt(params.id, 10);
+  const userId = params.id;
   const [showAssign, setShowAssign] = useState(false);
   const [showCreateProgram, setShowCreateProgram] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -220,7 +220,8 @@ export default function AdminMemberProfile() {
   }
 
   function onAssign(data: AssignForm) {
-    assignSub.mutate({ userId, data: { subscriptionId: data.subscriptionId, startDate: data.startDate, paymentAmount: data.paymentAmount, paymentMethod: data.paymentMethod } }, {
+    if (!userId) return;
+    assignSub.mutate({ data: { userId, subscriptionId: data.subscriptionId, startDate: data.startDate, paymentAmount: data.paymentAmount, paymentMethod: data.paymentMethod } }, {
       onSuccess: () => {
         toast({ title: "✅ تم تعيين الاشتراك" }); setShowAssign(false);
         queryClient.invalidateQueries({ queryKey: getGetMemberCurrentSubscriptionQueryKey(userId) });

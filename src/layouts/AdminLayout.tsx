@@ -110,8 +110,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Today's checkins for badge
   const today = new Date().toISOString().slice(0, 10);
   const { data: todayCheckins } = useListCheckins(
-    { date: today },
-    { query: { queryKey: getListCheckinsQueryKey({ date: today }) } }
+    { from: today, to: today },
+    { query: { queryKey: getListCheckinsQueryKey({ from: today, to: today }) } }
   );
   const todayCount: number = Array.isArray(todayCheckins) ? todayCheckins.length : ((todayCheckins as any)?.data?.length ?? (todayCheckins as any)?.total ?? 0);
 
