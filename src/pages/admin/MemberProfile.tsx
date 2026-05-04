@@ -101,11 +101,11 @@ export default function AdminMemberProfile() {
   // Checkin stats
   const now = new Date();
   const thisMonth = checkinList.filter((c: any) => {
-    const d = new Date(c.checkinTime ?? c.createdAt ?? "");
+    const d = new Date(c.date ?? "");
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
   const thisWeek = checkinList.filter((c: any) => {
-    const d = new Date(c.checkinTime ?? c.createdAt ?? "");
+    const d = new Date(c.date ?? "");
     const diff = (now.getTime() - d.getTime()) / 86400000;
     return diff <= 7;
   }).length;
@@ -368,8 +368,8 @@ export default function AdminMemberProfile() {
                 <p className="text-muted-foreground text-sm">لا يوجد حضور مسجل</p>
               ) : (
                 <div className="space-y-1.5">
-                  {[...checkinList].sort((a: any, b: any) => new Date(b.checkinTime ?? b.createdAt ?? "").getTime() - new Date(a.checkinTime ?? a.createdAt ?? "").getTime()).slice(0, 8).map((c: any) => {
-                    const d = new Date(c.checkinTime ?? c.createdAt ?? "");
+                  {[...checkinList].sort((a: any, b: any) => new Date(b.date ?? "").getTime() - new Date(a.date ?? "").getTime()).slice(0, 8).map((c: any) => {
+                    const d = new Date(c.date ?? "");
                     return (
                       <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                         <p className="text-sm text-foreground">{d.toLocaleDateString("ar-EG", { weekday: "short", month: "short", day: "numeric" })}</p>

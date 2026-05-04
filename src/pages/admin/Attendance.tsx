@@ -57,13 +57,12 @@ export default function AdminAttendance() {
 
   // Filter by date range and search
   const filteredCheckins = allCheckins.filter((c: any) => {
-    const d = new Date(c.checkinTime ?? c.createdAt ?? "");
+    const d = new Date(c.date ?? "");
     if (dateFrom && d < new Date(dateFrom)) return false;
     if (dateTo && d > new Date(dateTo + "T23:59:59")) return false;
     if (search) {
-      const name = c.user?.name ?? "";
-      const phone = c.user?.phone ?? "";
-      return name.includes(search) || phone.includes(search);
+      const name = c.userName ?? "";
+      return name.includes(search);
     }
     return true;
   });
@@ -71,7 +70,7 @@ export default function AdminAttendance() {
   // Group by date for display
   const grouped: Record<string, any[]> = {};
   filteredCheckins.forEach((c: any) => {
-    const key = new Date(c.checkinTime ?? c.createdAt ?? "").toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const key = new Date(c.date ?? "").toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(c);
   });
@@ -324,7 +323,7 @@ export default function AdminAttendance() {
             {/* Today's checkins summary */}
             <div className="rounded-xl p-4" style={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 15%)" }}>
               <p className="text-xs text-muted-foreground mb-1">حضور اليوم</p>
-              <p className="text-3xl font-black" style={{ color: GOLD }}>{allCheckins.filter((c: any) => new Date(c.checkinTime ?? c.createdAt ?? "").toDateString() === new Date().toDateString()).length}</p>
+              <p className="text-3xl font-black" style={{ color: GOLD }}>{allCheckins.filter((c: any) => new Date(c.date ?? "").toDateString() === new Date().toDateString()).length}</p>
               <p className="text-xs text-muted-foreground mt-1">{today}</p>
             </div>
           </div>
@@ -402,8 +401,8 @@ export default function AdminAttendance() {
                   </div>
                   <div style={{ background: "hsl(0 0% 8%)" }}>
                     {entries.map((c: any) => {
-                      const name = c.user?.name ?? "—";
-                      const time = new Date(c.checkinTime ?? c.createdAt ?? "").toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+                      const name = c.userName ?? "—";
+                      const time = new Date(c.date ?? "").toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
                       return (
                         <div key={c.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: "1px solid hsl(0 0% 11%)" }}>
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
@@ -412,7 +411,7 @@ export default function AdminAttendance() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground">{name}</p>
-                            <p className="text-xs text-muted-foreground">{c.user?.phone}</p>
+                            <p className="text-xs text-muted-foreground">ID: #{c.userId}</p>
                           </div>
                           <p className="text-xs tabular-nums" style={{ color: GOLD }}>{time}</p>
                         </div>
