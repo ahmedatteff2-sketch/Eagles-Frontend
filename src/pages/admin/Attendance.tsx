@@ -158,12 +158,38 @@ export default function AdminAttendance() {
   }
 
   async function handleManualCheckin() {
-    const uid = parseInt(manualUserId, 10);
-    if (!uid) { toast({ title: "أدخل رقم عضوية صحيح", variant: "destructive" }); return; }
+    if (!manualUserId.trim()) { toast({ title: "أدخل بيانات صحيحة", variant: "destructive" }); return; }
     setSavingManual(true);
-    const ok = await doCheckin(uid);
+
+    let userToHandle = null;
+    const searchVal = manualUserId.trim().toLowerCase();
+    const idNum = parseInt(manualUserId, 10);
+
+    // Try finding in currently fetched list first
+    userToHandle = userList.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
+
+    // If not found, fetch from API
+    if (!userToHandle) {
+      try {
+        const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || "";
+        const res = await fetch(`/api/users?search=${encodeURIComponent(manualUserId.trim())}&limit=5`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const users = data?.data || [];
+        userToHandle = users.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
+      } catch (e) { }
+    }
+
+    if (!userToHandle) {
+      toast({ title: "العضو غير موجود", variant: "destructive" });
+      setSavingManual(false);
+      return;
+    }
+
+    const ok = await doCheckin(userToHandle.id);
     setSavingManual(false);
-    toast({ title: ok ? "✅ تم تسجيل الحضور يدوياً" : "⚠️ فشل في التسجيل" });
+    toast({ title: ok ? `✅ تم تسجيل حضور ${userToHandle.name}` : "⚠️ فشل في التسجيل" });
     if (ok) setManualUserId("");
   }
 
@@ -257,7 +283,7 @@ export default function AdminAttendance() {
               <h2 className="text-sm font-semibold text-foreground">تسجيل يدوي</h2>
               <div className="flex gap-2">
                 <input value={manualUserId} onChange={e => setManualUserId(e.target.value)} onKeyDown={e => e.key === "Enter" && handleManualCheckin()}
-                  className={inp + " flex-1"} style={inpSt} placeholder="رقم العضوية..." type="number" />
+                  className={inp + " flex-1"} style={inpSt} placeholder="رقم العضوية أو الكود..." type="text" />
                 <button onClick={handleManualCheckin} disabled={savingManual}
                   className="px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 whitespace-nowrap"
                   style={{ background: "linear-gradient(135deg, hsl(40 65% 52%), hsl(40 65% 42%))", color: "hsl(0 0% 5%)" }}>
