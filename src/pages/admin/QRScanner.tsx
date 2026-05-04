@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useListUsers, getListUsersQueryKey } from "@workspace/api-client-react";
+import { useListUsers, getListUsersQueryKey, useCreateCheckin } from "@workspace/api-client-react";
 
 export default function AdminQRScanner() {
   const { toast } = useToast();
+  const createCheckin = useCreateCheckin();
   const [manualId, setManualId] = useState("");
   const [lastCheckin, setLastCheckin] = useState<{ name: string; time: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,25 +38,16 @@ export default function AdminQRScanner() {
     setLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-      const res = await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, date: today }),
-      });
-      if (res.ok) {
-        setLastCheckin({ name: userName, time: new Date().toLocaleTimeString("ar-EG") });
-        setFlash(true);
-        setTimeout(() => setFlash(false), 900);
-        toast({ title: `✅ تم تسجيل حضور ${userName}` });
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast({ title: err.message ?? "فشل تسجيل الحضور", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "خطأ في الاتصال بالسيرفر", variant: "destructive" });
+      await createCheckin.mutateAsync({ data: { userId, date: today } });
+      setLastCheckin({ name: userName, time: new Date().toLocaleTimeString("ar-EG") });
+      setFlash(true);
+      setTimeout(() => setFlash(false), 900);
+      toast({ title: `✅ تم تسجيل حضور ${userName}` });
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "فشل تسجيل الحضور", variant: "destructive" });
     }
     setLoading(false);
-  }, [loading, toast]);
+  }, [loading, toast, createCheckin]);
 
   const processQR = useCallback((raw: string) => {
     const now = Date.now();
@@ -176,9 +168,10 @@ export default function AdminQRScanner() {
   }, [processQR, toast]);
 
   const handleManualCheckin = async () => {
-    if (!manualId.trim()) { toast({ title: "أدخل رقم عضوية صحيح", variant: "destructive" }); return; }
+    if (!manualId.trim()) { toast({ title: "أدخل بيانات صحيحة", variant: "destructive" }); return; }
     const idNum = parseInt(manualId);
-    const user = users.find((u: any) => u.id === idNum || u.memberCode === manualId.trim() || u.phone === manualId.trim());
+    const searchVal = manualId.trim().toLowerCase();
+    const user = users.find((u: any) => u.id === idNum || u.memberCode?.toLowerCase() === searchVal || u.phone === searchVal);
     if (!user) { toast({ title: "العضو غير موجود", variant: "destructive" }); return; }
     await doCheckin(user.id, user.name);
     setManualId("");
